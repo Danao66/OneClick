@@ -1,6 +1,9 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
 import { AppProvider } from './context';
 import { ClientLayout, AdminLayout } from './components/Layout';
+import ProtectedRoute from './components/ProtectedRoute';
+import Login from './pages/Login';
 
 // Client pages
 import ClientDashboard from './pages/client/Dashboard';
@@ -22,11 +25,20 @@ import './App.css';
 
 function App() {
   return (
-    <AppProvider>
+    <AuthProvider>
       <BrowserRouter>
         <Routes>
-          {/* Client Portal */}
-          <Route path="/client" element={<ClientLayout />}>
+          {/* Public */}
+          <Route path="/login" element={<Login />} />
+
+          {/* Client Portal — requires auth */}
+          <Route path="/client" element={
+            <ProtectedRoute requiredRole="client">
+              <AppProvider>
+                <ClientLayout />
+              </AppProvider>
+            </ProtectedRoute>
+          }>
             <Route index element={<ClientDashboard />} />
             <Route path="pitch-deck" element={<PitchDeck />} />
             <Route path="documents" element={<Documents />} />
@@ -34,8 +46,14 @@ function App() {
             <Route path="onboarding" element={<Onboarding />} />
           </Route>
 
-          {/* Admin Back-Office */}
-          <Route path="/admin" element={<AdminLayout />}>
+          {/* Admin Back-Office — requires admin role */}
+          <Route path="/admin" element={
+            <ProtectedRoute requiredRole="admin">
+              <AppProvider>
+                <AdminLayout />
+              </AppProvider>
+            </ProtectedRoute>
+          }>
             <Route index element={<AdminDashboard />} />
             <Route path="clients" element={<AdminClients />} />
             <Route path="biens" element={<AdminBiens />} />
@@ -46,10 +64,10 @@ function App() {
           </Route>
 
           {/* Default redirect */}
-          <Route path="*" element={<Navigate to="/client" replace />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </BrowserRouter>
-    </AppProvider>
+    </AuthProvider>
   );
 }
 

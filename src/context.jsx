@@ -4,10 +4,13 @@ import {
   mockNotificationsClient, mockNotificationsAdmin, mockAutomatisations,
   mockTravaux, mockDocuments
 } from './data';
+import { useAuth } from './context/AuthContext';
 
 const AppContext = createContext();
 
 export function AppProvider({ children }) {
+  const { clientId: authClientId, isAdmin } = useAuth();
+
   const [clients, setClients] = useState(mockClients);
   const [biens, setBiens] = useState(mockBiens);
   const [agences, setAgences] = useState(mockAgences);
@@ -18,9 +21,8 @@ export function AppProvider({ children }) {
   const [travaux, setTravaux] = useState(mockTravaux);
   const [documents] = useState(mockDocuments);
 
-  // Current client for front-office (simulated login)
-  const [currentClientId, setCurrentClientId] = useState('c1');
-
+  // Current client is determined by auth
+  const currentClientId = authClientId || 'c1';
   const currentClient = clients.find(c => c.id === currentClientId);
 
   const getClientBiens = useCallback((clientId) => {
@@ -122,7 +124,7 @@ export function AppProvider({ children }) {
   const value = {
     clients, biens, agences, journalNego, notificationsClient, notificationsAdmin,
     automatisations, travaux, documents,
-    currentClient, currentClientId, setCurrentClientId,
+    currentClient, currentClientId,
     getClientBiens, getBienById, getClientById, getAgenceById, getJournalForClient,
     validatePitchDeck, updateBienStatut, updateClientStatut, addClient,
     toggleTravauxChecklist,
