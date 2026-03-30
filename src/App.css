@@ -1,0 +1,31 @@
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* Hide step labels on small screens in onboarding */
+@media (max-width: 600px) {
+  .hide-mobile {
+    display: none;
+  }
+}
+
+/* Smooth transitions for page changes */
+.main-content {
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Building2 placeholder in PitchDeck */
+.photo-carousel .placeholder-img {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--gray-100), var(--gray-200));
+}
