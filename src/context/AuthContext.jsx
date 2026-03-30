@@ -1,7 +1,10 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 const AuthContext = createContext();
+
+// Cache key for persisting auth state
+const CACHE_KEY = 'cleenmain_auth_cache';
 
 // Demo mode credentials (when Supabase is not configured)
 const DEMO_ADMIN = { email: 'admin@cleenmain.fr', password: 'admin123' };
@@ -13,17 +16,39 @@ const DEMO_CLIENTS = {
   'antoine.girard@medical.fr': { password: 'client123', clientId: 'c5', prenom: 'Antoine', nom: 'Girard' },
 };
 
+// Read cached auth state for instant rendering
+function getCachedAuth() {
+  try {
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (cached) return JSON.parse(cached);
+  } catch { /* ignore */ }
+  return null;
+}
+
+function setCachedAuth(user, role, clientId) {
+  try {
+    if (user) {
+      localStorage.setItem(CACHE_KEY, JSON.stringify({ user, role, clientId, ts: Date.now() }));
+    } else {
+      localStorage.removeItem(CACHE_KEY);
+    }
+  } catch { /* ignore */ }
+}
+
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [userRole, setUserRole] = useState(null); // 'admin' | 'client'
-  const [clientId, setClientId] = useState(null);
-  const [loading, setLoading] = useState(true);
+  // Initialize from cache for instant rendering
+  const cached = useRef(getCachedAuth()).current;
+
+  const [user, setUser] = useState(cached?.user || null);
+  const [userRole, setUserRole] = useState(cached?.role || null);
+  const [clientId, setClientId] = useState(cached?.clientId || null);
+  // If we have cached data, don't show loading spinner
+  const [loading, setLoading] = useState(!cached);
   const [error, setError] = useState(null);
 
-  // ── Supabase Mode ──
   useEffect(() => {
     if (!isSupabaseConfigured) {
-      // Check localStorage for demo session
+      // Demo mode: check localStorage
       const saved = localStorage.getItem('cleenmain_session');
       if (saved) {
         try {
@@ -37,17 +62,22 @@ export function AuthProvider({ children }) {
       return;
     }
 
-    // Supabase: Get initial session
+    // Supabase: Get initial session (verify cache in background)
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setUser(session.user);
         fetchUserRole(session.user.id);
       } else {
+        // No valid session — clear cache
+        setUser(null);
+        setUserRole(null);
+        setClientId(null);
+        setCachedAuth(null);
         setLoading(false);
       }
     });
 
-    // Supabase: Listen for auth changes
+    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         if (session?.user) {
@@ -57,6 +87,7 @@ export function AuthProvider({ children }) {
           setUser(null);
           setUserRole(null);
           setClientId(null);
+          setCachedAuth(null);
         }
       }
     );
@@ -75,6 +106,12 @@ export function AuthProvider({ children }) {
       if (error) throw error;
       setUserRole(data.role);
       setClientId(data.client_id);
+      // Cache for next page load
+      setCachedAuth(
+        { id: userId },
+        data.role,
+        data.client_id
+      );
     } catch (err) {
       console.error('Error fetching role:', err);
       setUserRole('client');
@@ -88,7 +125,6 @@ export function AuthProvider({ children }) {
     setError(null);
 
     if (!isSupabaseConfigured) {
-      // Demo mode
       if (email === DEMO_ADMIN.email && password === DEMO_ADMIN.password) {
         const session = { user: { email, id: 'admin' }, role: 'admin', clientId: null };
         setUser(session.user);
@@ -97,7 +133,6 @@ export function AuthProvider({ children }) {
         localStorage.setItem('cleenmain_session', JSON.stringify(session));
         return { role: 'admin' };
       }
-
       const client = DEMO_CLIENTS[email];
       if (client && password === client.password) {
         const session = { user: { email, id: client.clientId, prenom: client.prenom, nom: client.nom }, role: 'client', clientId: client.clientId };
@@ -107,21 +142,20 @@ export function AuthProvider({ children }) {
         localStorage.setItem('cleenmain_session', JSON.stringify(session));
         return { role: 'client' };
       }
-
       setError('Email ou mot de passe incorrect');
       throw new Error('Invalid credentials');
     }
 
     // Supabase mode
-    const { data, error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
 
     if (authError) {
-      setError(authError.message === 'Invalid login credentials'
+      const msg = authError.message === 'Invalid login credentials'
         ? 'Email ou mot de passe incorrect'
-        : authError.message);
+        : authError.message === 'Email not confirmed'
+        ? 'Veuillez confirmer votre email avant de vous connecter'
+        : authError.message;
+      setError(msg);
       throw authError;
     }
 
@@ -132,7 +166,12 @@ export function AuthProvider({ children }) {
       .eq('id', data.user.id)
       .single();
 
-    return { role: profile?.role || 'client' };
+    const role = profile?.role || 'client';
+    setUserRole(role);
+    setClientId(profile?.client_id);
+    setCachedAuth(data.user, role, profile?.client_id);
+
+    return { role };
   }, []);
 
   // ── Sign Out ──
@@ -143,10 +182,11 @@ export function AuthProvider({ children }) {
     setUser(null);
     setUserRole(null);
     setClientId(null);
+    setCachedAuth(null);
     localStorage.removeItem('cleenmain_session');
   }, []);
 
-  // ── Sign Up (for new clients) ──
+  // ── Sign Up ──
   const signUp = useCallback(async (email, password, metadata = {}) => {
     setError(null);
 
@@ -158,13 +198,14 @@ export function AuthProvider({ children }) {
     const { data, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
-      options: {
-        data: metadata,
-      },
+      options: { data: metadata },
     });
 
     if (signUpError) {
-      setError(signUpError.message);
+      const msg = signUpError.message === 'User already registered'
+        ? 'Un compte existe déjà avec cet email'
+        : signUpError.message;
+      setError(msg);
       throw signUpError;
     }
 
