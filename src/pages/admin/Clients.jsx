@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { useApp } from '../../context';
 import { formatCurrency, formatDate } from '../../data';
 import ScoreGauge from '../../components/ScoreGauge';
+import Modal from '../../components/Modal';
 import {
   Search, ChevronRight, X, Phone, Mail, MapPin, Briefcase,
-  CalendarDays, DollarSign, Clock, FileText
+  CalendarDays, DollarSign, Clock, FileText, Plus, Save, Edit3, Loader2
 } from 'lucide-react';
 
 const statusColors = {
@@ -17,10 +18,57 @@ const paiementColors = {
   Acompte: 'badge-orange', 'Soldé': 'badge-green', 'Impayé': 'badge-red',
 };
 
+const emptyClient = {
+  prenom: '', nom: '', email: '', telephone: '', ville_residence: '',
+  situation_pro: '', revenus_mensuels: '', apport_disponible: '', credits_en_cours: '',
+  budget_total: '', villes_cibles: '', type_bien: '', rendement_cible: '',
+  objectif: '', tolerance_travaux: '', regime_fiscal: '', source_acquisition: '', notes: '',
+};
+
 export default function AdminClients() {
-  const { clients, getJournalForClient, getClientBiens } = useApp();
+  const { clients, getJournalForClient, getClientBiens, addClient, updateClientData } = useApp();
   const [search, setSearch] = useState('');
   const [selectedClient, setSelectedClient] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [form, setForm] = useState(emptyClient);
+  const [saving, setSaving] = useState(false);
+
+  const openAdd = () => { setForm(emptyClient); setEditMode(false); setShowModal(true); };
+  const openEdit = (client) => {
+    setForm({
+      ...client,
+      villes_cibles: Array.isArray(client.villes_cibles) ? client.villes_cibles.join(', ') : client.villes_cibles || '',
+      type_bien: Array.isArray(client.type_bien) ? client.type_bien.join(', ') : client.type_bien || '',
+    });
+    setEditMode(true); setShowModal(true);
+  };
+  const update = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const data = {
+        ...form,
+        villes_cibles: typeof form.villes_cibles === 'string' ? form.villes_cibles.split(',').map(v => v.trim()).filter(Boolean) : form.villes_cibles,
+        type_bien: typeof form.type_bien === 'string' ? form.type_bien.split(',').map(v => v.trim()).filter(Boolean) : form.type_bien,
+        apport_disponible: parseInt(form.apport_disponible) || 0,
+        budget_total: parseInt(form.budget_total) || 0,
+        rendement_cible: parseFloat(form.rendement_cible) || 0,
+      };
+      if (editMode) {
+        const { id, created_at, isNew, ...updates } = data;
+        await updateClientData(form.id, updates);
+      } else {
+        await addClient(data);
+      }
+      setShowModal(false);
+    } catch (err) {
+      console.error('Save error:', err);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const filtered = clients.filter(c =>
     `${c.prenom} ${c.nom} ${c.ville_residence} ${c.statut}`.toLowerCase().includes(search.toLowerCase())
@@ -36,9 +84,10 @@ export default function AdminClients() {
 
     return (
       <div>
-        <button className="btn btn-ghost" onClick={() => setSelectedClient(null)} style={{ marginBottom: 'var(--space-md)' }}>
-          ← Retour à la liste
-        </button>
+        <div className="flex justify-between items-center" style={{ marginBottom: 'var(--space-md)' }}>
+          <button className="btn btn-ghost" onClick={() => setSelectedClient(null)}>← Retour à la liste</button>
+          <button className="btn btn-outline btn-sm" onClick={() => openEdit(client)}><Edit3 size={14} /> Modifier</button>
+        </div>
 
         <div className="flex items-center gap-lg" style={{ marginBottom: 'var(--space-xl)', flexWrap: 'wrap' }}>
           <div style={{
@@ -179,15 +228,12 @@ export default function AdminClients() {
             <h1 className="page-title">👥 Gestion Clients (CRM)</h1>
             <p className="page-subtitle">{clients.length} clients</p>
           </div>
-          <div style={{ position: 'relative' }}>
-            <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--gray-400)' }} />
-            <input
-              className="form-input"
-              placeholder="Rechercher un client..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              style={{ paddingLeft: 36, width: 280 }}
-            />
+          <div className="flex gap-sm">
+            <div style={{ position: 'relative' }}>
+              <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--gray-400)' }} />
+              <input className="form-input" placeholder="Rechercher..." value={search} onChange={e => setSearch(e.target.value)} style={{ paddingLeft: 36, width: 220 }} />
+            </div>
+            <button className="btn btn-gold btn-sm" onClick={openAdd}><Plus size={16} /> Ajouter</button>
           </div>
         </div>
       </div>
@@ -224,6 +270,62 @@ export default function AdminClients() {
           </tbody>
         </table>
       </div>
+      {/* Modal Ajout/Modification */}
+      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title={editMode ? 'Modifier le client' : 'Ajouter un client'} width={650}>
+        <div className="grid-2">
+          <div className="form-group"><label className="form-label">Prénom *</label><input className="form-input" value={form.prenom} onChange={e => update('prenom', e.target.value)} /></div>
+          <div className="form-group"><label className="form-label">Nom *</label><input className="form-input" value={form.nom} onChange={e => update('nom', e.target.value)} /></div>
+        </div>
+        <div className="grid-2">
+          <div className="form-group"><label className="form-label">Email *</label><input className="form-input" type="email" value={form.email} onChange={e => update('email', e.target.value)} /></div>
+          <div className="form-group"><label className="form-label">Téléphone</label><input className="form-input" value={form.telephone} onChange={e => update('telephone', e.target.value)} /></div>
+        </div>
+        <div className="grid-2">
+          <div className="form-group"><label className="form-label">Ville</label><input className="form-input" value={form.ville_residence} onChange={e => update('ville_residence', e.target.value)} /></div>
+          <div className="form-group"><label className="form-label">Situation pro</label>
+            <select className="form-select" value={form.situation_pro} onChange={e => update('situation_pro', e.target.value)}>
+              <option value="">Sélectionner</option>
+              <option>CDI</option><option>CDD</option><option>Fonctionnaire</option>
+              <option>Indépendant</option><option>Chef d'entreprise</option><option>Libéral</option><option>Retraité</option>
+            </select>
+          </div>
+        </div>
+        <div className="grid-2">
+          <div className="form-group"><label className="form-label">Budget total (€)</label><input className="form-input" type="number" value={form.budget_total} onChange={e => update('budget_total', e.target.value)} /></div>
+          <div className="form-group"><label className="form-label">Apport (€)</label><input className="form-input" type="number" value={form.apport_disponible} onChange={e => update('apport_disponible', e.target.value)} /></div>
+        </div>
+        <div className="grid-2">
+          <div className="form-group"><label className="form-label">Villes cibles</label><input className="form-input" value={form.villes_cibles} onChange={e => update('villes_cibles', e.target.value)} placeholder="Lyon, Saint-Étienne..." /></div>
+          <div className="form-group"><label className="form-label">Rendement cible (%)</label><input className="form-input" type="number" step="0.5" value={form.rendement_cible} onChange={e => update('rendement_cible', e.target.value)} /></div>
+        </div>
+        <div className="grid-2">
+          <div className="form-group"><label className="form-label">Objectif</label>
+            <select className="form-select" value={form.objectif} onChange={e => update('objectif', e.target.value)}>
+              <option value="">Sélectionner</option>
+              <option>Rendement</option><option>Patrimoine</option><option>Défiscalisation</option><option>Mixte</option>
+            </select>
+          </div>
+          <div className="form-group"><label className="form-label">Régime fiscal</label>
+            <select className="form-select" value={form.regime_fiscal} onChange={e => update('regime_fiscal', e.target.value)}>
+              <option value="">Sélectionner</option>
+              <option>LMNP</option><option>Nu</option><option>SCI_IS</option><option>A_definir</option>
+            </select>
+          </div>
+        </div>
+        <div className="form-group"><label className="form-label">Source</label>
+          <select className="form-select" value={form.source_acquisition} onChange={e => update('source_acquisition', e.target.value)}>
+            <option value="">Sélectionner</option>
+            <option>Instagram</option><option>YouTube</option><option>Google</option><option>LinkedIn</option><option>Referral</option><option>Autre</option>
+          </select>
+        </div>
+        <div className="form-group"><label className="form-label">Notes</label><textarea className="form-textarea" rows={3} value={form.notes} onChange={e => update('notes', e.target.value)} /></div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 'var(--space-md)' }}>
+          <button className="btn btn-outline" onClick={() => setShowModal(false)}>Annuler</button>
+          <button className="btn btn-gold" onClick={handleSave} disabled={saving || !form.prenom || !form.nom || !form.email}>
+            {saving ? <><Loader2 size={16} className="spin" /> Sauvegarde...</> : <><Save size={16} /> {editMode ? 'Enregistrer' : 'Créer le client'}</>}
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 }

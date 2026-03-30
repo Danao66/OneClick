@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { useApp } from '../../context';
 import { formatCurrency, formatDate, getScoreColor, getChecklistProgress } from '../../data';
 import ScoreGauge from '../../components/ScoreGauge';
+import Modal from '../../components/Modal';
 import {
   Search, Filter, ChevronRight, MapPin, Ruler, Thermometer,
-  CheckCircle2, X, ExternalLink, AlertTriangle, Building2
+  CheckCircle2, X, ExternalLink, AlertTriangle, Building2, Plus, Save, Loader2
 } from 'lucide-react';
 
 const statusColors = {
@@ -28,11 +29,45 @@ const checklistLabels = {
   dvf_compars: { label: 'DVF comparables quartier 3 biens', obligatoire: true, impact: '-10%' },
 };
 
+const emptyBien = {
+  adresse: '', ville: '', surface_m2: '', prix_affiche: '', dpe: '',
+  charges_copro: '', taxe_fonciere: '', loyer_estime: '', travaux_estimes: '',
+  source: '', lien_annonce: '', client_attribue: '', notes: '', verdict_expert: '',
+};
+
 export default function AdminBiens() {
-  const { biens, clients, setBiens } = useApp();
+  const { biens, clients, setBiens, addBien } = useApp();
   const [search, setSearch] = useState('');
   const [selectedBien, setSelectedBien] = useState(null);
   const [filterStatus, setFilterStatus] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [form, setForm] = useState(emptyBien);
+  const [saving, setSaving] = useState(false);
+
+  const openAdd = () => { setForm(emptyBien); setShowModal(true); };
+  const update = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const s = parseInt(form.surface_m2)||0, p = parseInt(form.prix_affiche)||0;
+      const loyer = parseInt(form.loyer_estime)||0;
+      const data = {
+        ...form,
+        surface_m2: s, prix_affiche: p, prix_m2: s > 0 ? Math.round(p/s) : 0,
+        charges_copro: parseInt(form.charges_copro)||0,
+        taxe_fonciere: parseInt(form.taxe_fonciere)||0,
+        loyer_estime: loyer,
+        travaux_estimes: parseInt(form.travaux_estimes)||0,
+        rentabilite_brute: p > 0 ? Math.round((loyer*12/p)*1000)/10 : 0,
+        statut: 'Identifié',
+        date_sourcing: new Date().toISOString().slice(0,10),
+        client_attribue: form.client_attribue || null,
+      };
+      await addBien(data);
+      setShowModal(false);
+    } catch (err) { console.error(err); } finally { setSaving(false); }
+  };
 
   const filtered = biens.filter(b => {
     const matchSearch = `${b.adresse} ${b.ville} ${b.statut}`.toLowerCase().includes(search.toLowerCase());
@@ -190,6 +225,7 @@ export default function AdminBiens() {
               <option>Identifié</option><option>En_analyse</option><option>Shortlisté</option>
               <option>Offre_envoyée</option><option>Offre_acceptée</option><option>Acquis</option><option>Rejeté</option>
             </select>
+            <button className="btn btn-gold btn-sm" onClick={openAdd}><Plus size={16} /> Ajouter</button>
           </div>
         </div>
       </div>
@@ -231,6 +267,51 @@ export default function AdminBiens() {
           </tbody>
         </table>
       </div>
+
+      {/* Modal Ajout */}
+      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="Ajouter un bien" width={600}>
+        <div className="grid-2">
+          <div className="form-group"><label className="form-label">Adresse *</label><input className="form-input" value={form.adresse} onChange={e => update('adresse', e.target.value)} /></div>
+          <div className="form-group"><label className="form-label">Ville *</label><input className="form-input" value={form.ville} onChange={e => update('ville', e.target.value)} /></div>
+        </div>
+        <div className="grid-3">
+          <div className="form-group"><label className="form-label">Surface (m²)</label><input className="form-input" type="number" value={form.surface_m2} onChange={e => update('surface_m2', e.target.value)} /></div>
+          <div className="form-group"><label className="form-label">Prix affiché (€)</label><input className="form-input" type="number" value={form.prix_affiche} onChange={e => update('prix_affiche', e.target.value)} /></div>
+          <div className="form-group"><label className="form-label">DPE</label>
+            <select className="form-select" value={form.dpe} onChange={e => update('dpe', e.target.value)}>
+              <option value="">-</option><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option><option>F</option><option>G</option>
+            </select>
+          </div>
+        </div>
+        <div className="grid-3">
+          <div className="form-group"><label className="form-label">Loyer estimé (€/mois)</label><input className="form-input" type="number" value={form.loyer_estime} onChange={e => update('loyer_estime', e.target.value)} /></div>
+          <div className="form-group"><label className="form-label">Charges copro (€/mois)</label><input className="form-input" type="number" value={form.charges_copro} onChange={e => update('charges_copro', e.target.value)} /></div>
+          <div className="form-group"><label className="form-label">Taxe foncière (€/an)</label><input className="form-input" type="number" value={form.taxe_fonciere} onChange={e => update('taxe_fonciere', e.target.value)} /></div>
+        </div>
+        <div className="grid-2">
+          <div className="form-group"><label className="form-label">Travaux estimés (€)</label><input className="form-input" type="number" value={form.travaux_estimes} onChange={e => update('travaux_estimes', e.target.value)} /></div>
+          <div className="form-group"><label className="form-label">Source</label>
+            <select className="form-select" value={form.source} onChange={e => update('source', e.target.value)}>
+              <option value="">Sélectionner</option>
+              <option>LBC</option><option>SeLoger</option><option>PAP</option><option>Agence_directe</option><option>Off_market</option>
+            </select>
+          </div>
+        </div>
+        <div className="form-group"><label className="form-label">Attribuer à un client</label>
+          <select className="form-select" value={form.client_attribue} onChange={e => update('client_attribue', e.target.value)}>
+            <option value="">Non attribué</option>
+            {clients.map(c => <option key={c.id} value={c.id}>{c.prenom} {c.nom}</option>)}
+          </select>
+        </div>
+        <div className="form-group"><label className="form-label">Lien annonce</label><input className="form-input" value={form.lien_annonce} onChange={e => update('lien_annonce', e.target.value)} placeholder="https://..." /></div>
+        <div className="form-group"><label className="form-label">Notes</label><textarea className="form-textarea" rows={3} value={form.notes} onChange={e => update('notes', e.target.value)} /></div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 'var(--space-md)' }}>
+          <button className="btn btn-outline" onClick={() => setShowModal(false)}>Annuler</button>
+          <button className="btn btn-gold" onClick={handleSave} disabled={saving || !form.adresse || !form.ville}>
+            {saving ? <><Loader2 size={16} className="spin" /> Sauvegarde...</> : <><Save size={16} /> Créer le bien</>}
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 }
