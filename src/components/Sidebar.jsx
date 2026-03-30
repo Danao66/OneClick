@@ -129,7 +129,11 @@ export default function Sidebar({ type = 'client' }) {
           }}>
             <div style={{ fontSize: '0.75rem' }}>
               <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                {user?.prenom ? `${user.prenom} ${user.nom}` : user?.email?.split('@')[0]}
+              {(() => {
+                const meta = user?.user_metadata || {};
+                const name = meta.prenom ? `${meta.prenom} ${meta.nom || ''}`.trim() : null;
+                return name || user?.email?.split('@')[0] || 'Utilisateur';
+              })()}
               </div>
               <div style={{ color: 'var(--gray-400)' }}>
                 {userIsAdmin ? 'Administrateur' : 'Client'}

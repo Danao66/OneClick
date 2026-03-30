@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useMemo } from 'react';
 import {
   mockClients, mockBiens, mockAgences, mockJournalNego,
   mockNotificationsClient, mockNotificationsAdmin, mockAutomatisations,
@@ -9,7 +9,7 @@ import { useAuth } from './context/AuthContext';
 const AppContext = createContext();
 
 export function AppProvider({ children }) {
-  const { clientId: authClientId, isAdmin } = useAuth();
+  const { clientId: authClientId, isAdmin, user } = useAuth();
 
   const [clients, setClients] = useState(mockClients);
   const [biens, setBiens] = useState(mockBiens);
@@ -21,9 +21,38 @@ export function AppProvider({ children }) {
   const [travaux, setTravaux] = useState(mockTravaux);
   const [documents] = useState(mockDocuments);
 
-  // Current client is determined by auth
-  const currentClientId = authClientId || 'c1';
-  const currentClient = clients.find(c => c.id === currentClientId);
+  // Current client: find by authClientId, or create a placeholder from Supabase user
+  const currentClientId = authClientId || null;
+  const currentClient = useMemo(() => {
+    if (isAdmin) return clients[0]; // Admin views default client for demo
+    if (currentClientId) {
+      const found = clients.find(c => c.id === currentClientId);
+      if (found) return found;
+    }
+    // New Supabase user — build a placeholder client from auth data
+    if (user) {
+      const meta = user.user_metadata || {};
+      return {
+        id: user.id,
+        prenom: meta.prenom || user.email?.split('@')[0] || 'Nouveau',
+        nom: meta.nom || 'Client',
+        email: user.email,
+        statut: 'Onboarding',
+        phase_actuelle: 'Phase 1',
+        budget_total: 0,
+        rendement_cible: 0,
+        villes_cibles: [],
+        type_bien: [],
+        apport_disponible: 0,
+        objectif: 'À définir',
+        regime_fiscal: 'À définir',
+        date_onboarding: new Date().toISOString().slice(0, 10),
+        score_base_profil: 0,
+        isNew: true,
+      };
+    }
+    return null;
+  }, [isAdmin, currentClientId, clients, user]);
 
   const getClientBiens = useCallback((clientId) => {
     return biens.filter(b => b.client_attribue === clientId);
