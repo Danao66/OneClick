@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '../../context';
-import { CheckCircle2, ArrowRight, ArrowLeft, User, Target, Home, AlertTriangle } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { CheckCircle2, ArrowRight, ArrowLeft, User, Target, Home, AlertTriangle, Loader2 } from 'lucide-react';
 
 const steps = [
   { title: 'Profil investisseur', icon: User },
@@ -11,10 +12,16 @@ const steps = [
 
 export default function Onboarding() {
   const { addClient } = useApp();
+  const { user } = useAuth();
+  const meta = user?.user_metadata || {};
+
   const [step, setStep] = useState(0);
   const [submitted, setSubmitted] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
   const [form, setForm] = useState({
-    prenom: '', nom: '', email: '', telephone: '', ville_residence: '',
+    prenom: meta.prenom || '', nom: meta.nom || '', email: user?.email || '',
+    telephone: '', ville_residence: '',
     situation_pro: '', revenus_mensuels: '', experience_immo: '', credits_en_cours: '',
     objectif: '', horizon: '', rendement_cible: '', tolerance_risque: '', regime_fiscal: '',
     budget_total: '', apport_disponible: '', type_bien: [], villes_cibles: '',
@@ -30,14 +37,25 @@ export default function Onboarding() {
     }));
   };
 
-  const handleSubmit = () => {
-    addClient({
-      ...form,
-      villes_cibles: form.villes_cibles.split(',').map(v => v.trim()).filter(Boolean),
-      apport_disponible: parseInt(form.apport_disponible) || 0,
-      budget_total: parseInt(form.budget_total) || 0,
-    });
-    setSubmitted(true);
+  const handleSubmit = async () => {
+    setSaving(true);
+    setSaveError(null);
+    try {
+      await addClient({
+        ...form,
+        user_id: user?.id || null,
+        villes_cibles: form.villes_cibles.split(',').map(v => v.trim()).filter(Boolean),
+        apport_disponible: parseInt(form.apport_disponible) || 0,
+        budget_total: parseInt(form.budget_total) || 0,
+        rendement_cible: parseFloat(form.rendement_cible) || 0,
+      });
+      setSubmitted(true);
+    } catch (err) {
+      setSaveError('Une erreur est survenue. Veuillez réessayer.');
+      console.error('Onboarding save error:', err);
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (submitted) {
@@ -358,6 +376,15 @@ export default function Onboarding() {
         )}
 
         {/* Navigation */}
+        {saveError && (
+          <div style={{
+            background: 'var(--red-light, #fdeaea)', border: '1px solid rgba(192,57,43,0.2)',
+            borderRadius: 'var(--radius-md)', padding: 'var(--space-sm) var(--space-md)',
+            marginTop: 'var(--space-md)', color: 'var(--red, #c0392b)', fontSize: '0.875rem',
+          }}>
+            {saveError}
+          </div>
+        )}
         <div className="flex justify-between" style={{ marginTop: 'var(--space-xl)' }}>
           {step > 0 ? (
             <button className="btn btn-outline" onClick={() => setStep(s => s - 1)}>
@@ -369,8 +396,12 @@ export default function Onboarding() {
               Suivant <ArrowRight size={16} />
             </button>
           ) : (
-            <button className="btn btn-gold btn-lg" onClick={handleSubmit}>
-              ✅ Soumettre mon profil
+            <button className="btn btn-gold btn-lg" onClick={handleSubmit} disabled={saving}>
+              {saving ? (
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Loader2 size={18} className="spin" /> Sauvegarde...
+                </span>
+              ) : '✅ Soumettre mon profil'}
             </button>
           )}
         </div>
