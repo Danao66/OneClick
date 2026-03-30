@@ -4,6 +4,7 @@ import { AppProvider } from './context';
 import { ClientLayout, AdminLayout } from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
+import Register from './pages/Register';
 
 // Client pages
 import ClientDashboard from './pages/client/Dashboard';
@@ -30,6 +31,7 @@ function App() {
         <Routes>
           {/* Public */}
           <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
 
           {/* Client Portal — requires auth */}
           <Route path="/client" element={

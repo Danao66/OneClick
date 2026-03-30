@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Lock, Mail, Eye, EyeOff, AlertCircle, Sparkles } from 'lucide-react';
 
@@ -238,10 +238,23 @@ export default function Login() {
           </div>
         )}
 
+        {/* Register link */}
+        <p style={{
+          textAlign: 'center',
+          marginTop: 'var(--space-lg)',
+          fontSize: '0.875rem',
+          color: 'var(--gray-500)',
+        }}>
+          Pas encore de compte ?{' '}
+          <Link to="/register" style={{ color: 'var(--gold)', fontWeight: 600, textDecoration: 'none' }}>
+            Créer un compte
+          </Link>
+        </p>
+
         {/* Footer */}
         <p style={{
           textAlign: 'center',
-          marginTop: 'var(--space-xl)',
+          marginTop: 'var(--space-md)',
           fontSize: '0.75rem',
           color: 'var(--gray-400)',
         }}>
