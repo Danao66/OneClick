@@ -123,6 +123,10 @@ export function AuthProvider({ children }) {
   // ── Sign In ──
   const signIn = useCallback(async (email, password) => {
     setError(null);
+    // Clear stale cache before new login
+    setCachedAuth(null);
+    setUserRole(null);
+    setClientId(null);
 
     if (!isSupabaseConfigured) {
       if (email === DEMO_ADMIN.email && password === DEMO_ADMIN.password) {
@@ -159,17 +163,28 @@ export function AuthProvider({ children }) {
       throw authError;
     }
 
-    // Fetch role
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role, client_id')
-      .eq('id', data.user.id)
-      .single();
+    // Fetch role — with retry
+    let role = 'client';
+    let profileClientId = null;
+    try {
+      const { data: profile, error: profErr } = await supabase
+        .from('profiles')
+        .select('role, client_id')
+        .eq('id', data.user.id)
+        .single();
 
-    const role = profile?.role || 'client';
+      if (!profErr && profile) {
+        role = profile.role || 'client';
+        profileClientId = profile.client_id;
+      }
+    } catch (err) {
+      console.error('Error fetching profile on login:', err);
+    }
+
+    setUser(data.user);
     setUserRole(role);
-    setClientId(profile?.client_id);
-    setCachedAuth(data.user, role, profile?.client_id);
+    setClientId(profileClientId);
+    setCachedAuth(data.user, role, profileClientId);
 
     return { role };
   }, []);
