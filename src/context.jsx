@@ -7,6 +7,7 @@ import {
 import { useAuth } from './context/AuthContext';
 import { isSupabaseConfigured } from './lib/supabase';
 import * as db from './lib/supabaseService';
+import { fireWebhook, logAutomation } from './lib/webhookService';
 
 const AppContext = createContext();
 
@@ -171,6 +172,10 @@ export function AppProvider({ children }) {
       }
     }
 
+    // Fire webhooks
+    fireWebhook('client.onboarded', { prenom: clientData.prenom, nom: clientData.nom, email: clientData.email, budget: clientData.budget_total });
+    logAutomation('client.onboarded', `${clientData.prenom} ${clientData.nom} a complété l'onboarding`);
+
     // Fallback: local state only
     setClients(prev => [newClient, ...prev]);
     setNotificationsAdmin(prev => [{
@@ -217,6 +222,9 @@ export function AppProvider({ children }) {
       }
     }
     setBiens(prev => [newBien, ...prev]);
+    // Fire webhooks
+    fireWebhook('bien.added', { adresse: bienData.adresse, ville: bienData.ville, prix: bienData.prix_affiche });
+    logAutomation('bien.added', `Bien ajouté: ${bienData.adresse}, ${bienData.ville}`);
     return newBien;
   }, []);
 
