@@ -5,7 +5,7 @@ import ScoreGauge from '../../components/ScoreGauge';
 import Modal from '../../components/Modal';
 import {
   Search, ChevronRight, X, Phone, Mail, MapPin, Briefcase,
-  CalendarDays, DollarSign, Clock, FileText, Plus, Save, Edit3, Loader2
+  CalendarDays, DollarSign, Clock, FileText, Plus, Save, Edit3, Loader2, Building2
 } from 'lucide-react';
 
 const statusColors = {
@@ -96,7 +96,7 @@ export default function AdminClients() {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             color: 'white', fontFamily: 'var(--font-display)', fontSize: '1.5rem', fontWeight: 700
           }}>
-            {client.prenom[0]}{client.nom[0]}
+            {client.prenom?.[0] || '?'}{client.nom?.[0] || '?'}
           </div>
           <div>
             <h1 className="page-title">{client.prenom} {client.nom}</h1>
