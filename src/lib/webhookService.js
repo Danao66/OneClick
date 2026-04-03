@@ -7,12 +7,12 @@ const STORAGE_KEY = 'cleenmain_webhooks';
 // Default webhook configurations — Make.com URLs pre-configured
 const defaultWebhooks = [
   { id: 'wh_new_client', name: 'Nouveau client inscrit', event: 'client.registered', url: 'https://hook.eu1.make.com/t2cb5um7eoj128havypuwd987yllll33', enabled: true, lastFired: null, fireCount: 0 },
-  { id: 'wh_onboarding', name: 'Onboarding complété', event: 'client.onboarded', url: '', enabled: false, lastFired: null, fireCount: 0 },
-  { id: 'wh_bien_added', name: 'Nouveau bien ajouté', event: 'bien.added', url: '', enabled: false, lastFired: null, fireCount: 0 },
+  { id: 'wh_onboarding', name: 'Onboarding complété', event: 'client.onboarded', url: 'https://hook.eu1.make.com/fk27dj912bg3f21syaj77360jqw51r6i', enabled: true, lastFired: null, fireCount: 0 },
+  { id: 'wh_bien_added', name: 'Nouveau bien ajouté', event: 'bien.added', url: 'https://hook.eu1.make.com/nzqw36zz6wnwk03x51zptf50ahe37sgn', enabled: true, lastFired: null, fireCount: 0 },
   { id: 'wh_pepite', name: 'Pépite détectée (Score > 85)', event: 'bien.pepite', url: 'https://hook.eu1.make.com/ib14v1slukxumi9b7dnep9g6f7hqnhq5', enabled: true, lastFired: null, fireCount: 0 },
-  { id: 'wh_offre', name: 'Offre validée par client', event: 'bien.offer_validated', url: '', enabled: false, lastFired: null, fireCount: 0 },
-  { id: 'wh_document', name: 'Document uploadé', event: 'document.uploaded', url: '', enabled: false, lastFired: null, fireCount: 0 },
-  { id: 'wh_phase', name: 'Changement de phase client', event: 'client.phase_changed', url: '', enabled: false, lastFired: null, fireCount: 0 },
+  { id: 'wh_offre', name: 'Offre validée par client', event: 'bien.offer_validated', url: 'https://hook.eu1.make.com/ccytmbkcgtxiwv7ukivvglfghectb5je', enabled: true, lastFired: null, fireCount: 0 },
+  { id: 'wh_document', name: 'Document uploadé', event: 'document.uploaded', url: 'https://hook.eu1.make.com/rvsqwmqmt6t936uetu7ihxe6vu887j56', enabled: true, lastFired: null, fireCount: 0 },
+  { id: 'wh_phase', name: 'Changement de phase client', event: 'client.phase_changed', url: 'https://hook.eu1.make.com/oj8859tqdtalx2thl0hshc7j9q6ww3sh', enabled: true, lastFired: null, fireCount: 0 },
 ];
 
 // Load webhooks from localStorage
