@@ -28,7 +28,12 @@ export default function ProtectedRoute({ children, requiredRole }) {
     return <Navigate to="/login" replace />;
   }
 
-  // Admin can access everything; client cannot access admin routes
+  // Admin trying to access client routes → redirect to admin
+  if (requiredRole === 'client' && userRole === 'admin') {
+    return <Navigate to="/admin" replace />;
+  }
+
+  // Client trying to access admin routes → redirect to client
   if (requiredRole === 'admin' && userRole !== 'admin') {
     return <Navigate to="/client" replace />;
   }
