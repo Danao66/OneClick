@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { fireWebhook, logAutomation } from '../lib/webhookService';
 import { UserPlus, Mail, Lock, Eye, EyeOff, AlertCircle, User, CheckCircle } from 'lucide-react';
 
 export default function Register() {
@@ -50,6 +51,9 @@ export default function Register() {
         role: 'client',
       });
 
+      // Fire webhook for new registration
+      fireWebhook('client.registered', { prenom: form.prenom, nom: form.nom, email: form.email });
+      logAutomation('client.registered', `Nouveau compte créé: ${form.prenom} ${form.nom} (${form.email})`);
       // Auto sign-in after registration
       try {
         await signIn(form.email, form.password);

@@ -8,6 +8,7 @@ const STORAGE_KEY = 'cleenmain_webhooks';
 const defaultWebhooks = [
   { id: 'wh_new_client', name: 'Nouveau client inscrit', event: 'client.registered', url: '', enabled: false, lastFired: null, fireCount: 0 },
   { id: 'wh_onboarding', name: 'Onboarding complété', event: 'client.onboarded', url: '', enabled: false, lastFired: null, fireCount: 0 },
+  { id: 'wh_bien_added', name: 'Nouveau bien ajouté', event: 'bien.added', url: '', enabled: false, lastFired: null, fireCount: 0 },
   { id: 'wh_pepite', name: 'Pépite détectée (Score > 85)', event: 'bien.pepite', url: '', enabled: false, lastFired: null, fireCount: 0 },
   { id: 'wh_offre', name: 'Offre validée par client', event: 'bien.offer_validated', url: '', enabled: false, lastFired: null, fireCount: 0 },
   { id: 'wh_document', name: 'Document uploadé', event: 'document.uploaded', url: '', enabled: false, lastFired: null, fireCount: 0 },
@@ -95,4 +96,8 @@ export function getAutomationLogs() {
     const stored = localStorage.getItem(LOG_KEY);
     return stored ? JSON.parse(stored) : [];
   } catch { return []; }
+}
+
+export function clearAutomationLogs() {
+  try { localStorage.removeItem(LOG_KEY); } catch { /* ignore */ }
 }

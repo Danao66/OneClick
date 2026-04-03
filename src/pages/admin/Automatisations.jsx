@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useApp } from '../../context';
-import { getWebhooks, saveWebhooks, getAutomationLogs, fireWebhook, logAutomation } from '../../lib/webhookService';
+import { getWebhooks, saveWebhooks, getAutomationLogs, clearAutomationLogs, fireWebhook, logAutomation } from '../../lib/webhookService';
 import {
   Zap, CheckCircle2, AlertCircle, XCircle, Play, Calendar, Hash,
-  Settings, Save, Link2, Send, Clock, Activity, Loader2, ExternalLink
+  Settings, Save, Link2, Send, Clock, Activity, Loader2, ExternalLink, Trash2
 } from 'lucide-react';
 
 const statusColors = {
@@ -24,7 +24,7 @@ export default function Automatisations() {
   useEffect(() => {
     setWebhooks(getWebhooks());
     setLogs(getAutomationLogs());
-  }, []);
+  }, [tab]); // Refresh when switching tabs
 
   const updateWebhook = (id, field, value) => {
     setWebhooks(prev => prev.map(w => w.id === id ? { ...w, [field]: value } : w));
@@ -237,7 +237,14 @@ export default function Automatisations() {
         <div className="card">
           <div className="card-header">
             <h3 className="card-title"><Clock size={18} /> Journal des automatisations</h3>
-            <span className="text-sm text-gray">{logs.length} entrées</span>
+            <div className="flex gap-sm items-center">
+              <span className="text-sm text-gray">{logs.length} entrées</span>
+              {logs.length > 0 && (
+                <button className="btn btn-outline btn-sm" onClick={() => { clearAutomationLogs(); setLogs([]); }}>
+                  <Trash2 size={14} /> Vider
+                </button>
+              )}
+            </div>
           </div>
           {logs.length === 0 ? (
             <p className="text-sm text-gray" style={{ textAlign: 'center', padding: 'var(--space-xl)' }}>

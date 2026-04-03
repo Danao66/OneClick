@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { formatDate } from '../../data';
 import { isSupabaseConfigured } from '../../lib/supabase';
 import * as storage from '../../lib/storageService';
+import { fireWebhook, logAutomation } from '../../lib/webhookService';
 import {
   FileText, Upload, Download, CheckCircle2, Clock,
   FileSignature, Shield, CreditCard, Home, Key, Trash2,
@@ -78,6 +79,9 @@ export default function Documents() {
         setDocs(prev => [doc, ...prev]);
       }
       setUploadSuccess(`${files.length} fichier(s) envoyé(s) avec succès`);
+      // Fire webhook
+      fireWebhook('document.uploaded', { client: currentClient?.prenom + ' ' + currentClient?.nom, category, fileCount: files.length });
+      logAutomation('document.uploaded', `${files.length} document(s) uploadé(s) par ${currentClient?.prenom} ${currentClient?.nom}`);
       setTimeout(() => setUploadSuccess(null), 4000);
     } catch (err) {
       console.error('Upload error:', err);

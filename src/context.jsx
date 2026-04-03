@@ -203,7 +203,13 @@ export function AppProvider({ children }) {
     }
     // Fallback
     setClients(prev => prev.map(c => c.id === clientId ? { ...c, ...updates } : c));
-  }, []);
+    // Fire webhook if phase changed
+    if (updates.phase_actuelle || updates.statut) {
+      const client = clients.find(c => c.id === clientId);
+      fireWebhook('client.phase_changed', { client: client?.prenom + ' ' + client?.nom, phase: updates.phase_actuelle, statut: updates.statut });
+      logAutomation('client.phase_changed', `${client?.prenom} ${client?.nom} → ${updates.phase_actuelle || updates.statut}`);
+    }
+  }, [clients]);
 
   // ── CRUD: Add Bien ──
   const addBien = useCallback(async (bienData) => {
@@ -225,6 +231,11 @@ export function AppProvider({ children }) {
     // Fire webhooks
     fireWebhook('bien.added', { adresse: bienData.adresse, ville: bienData.ville, prix: bienData.prix_affiche });
     logAutomation('bien.added', `Bien ajouté: ${bienData.adresse}, ${bienData.ville}`);
+    // Pépite detection
+    if (newBien.score_base > 85) {
+      fireWebhook('bien.pepite', { adresse: bienData.adresse, ville: bienData.ville, prix: bienData.prix_affiche, score: newBien.score_base });
+      logAutomation('bien.pepite', `🏆 Pépite détectée: ${bienData.adresse} (score ${newBien.score_base})`);
+    }
     return newBien;
   }, []);
 
