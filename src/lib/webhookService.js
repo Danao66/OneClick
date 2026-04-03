@@ -4,12 +4,12 @@
 
 const STORAGE_KEY = 'cleenmain_webhooks';
 
-// Default webhook configurations
+// Default webhook configurations — Make.com URLs pre-configured
 const defaultWebhooks = [
-  { id: 'wh_new_client', name: 'Nouveau client inscrit', event: 'client.registered', url: '', enabled: false, lastFired: null, fireCount: 0 },
+  { id: 'wh_new_client', name: 'Nouveau client inscrit', event: 'client.registered', url: 'https://hook.eu1.make.com/t2cb5um7eoj128havypuwd987yllll33', enabled: true, lastFired: null, fireCount: 0 },
   { id: 'wh_onboarding', name: 'Onboarding complété', event: 'client.onboarded', url: '', enabled: false, lastFired: null, fireCount: 0 },
   { id: 'wh_bien_added', name: 'Nouveau bien ajouté', event: 'bien.added', url: '', enabled: false, lastFired: null, fireCount: 0 },
-  { id: 'wh_pepite', name: 'Pépite détectée (Score > 85)', event: 'bien.pepite', url: '', enabled: false, lastFired: null, fireCount: 0 },
+  { id: 'wh_pepite', name: 'Pépite détectée (Score > 85)', event: 'bien.pepite', url: 'https://hook.eu1.make.com/ib14v1slukxumi9b7dnep9g6f7hqnhq5', enabled: true, lastFired: null, fireCount: 0 },
   { id: 'wh_offre', name: 'Offre validée par client', event: 'bien.offer_validated', url: '', enabled: false, lastFired: null, fireCount: 0 },
   { id: 'wh_document', name: 'Document uploadé', event: 'document.uploaded', url: '', enabled: false, lastFired: null, fireCount: 0 },
   { id: 'wh_phase', name: 'Changement de phase client', event: 'client.phase_changed', url: '', enabled: false, lastFired: null, fireCount: 0 },
@@ -21,10 +21,14 @@ export function getWebhooks() {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       const parsed = JSON.parse(stored);
-      // Merge with defaults to add any new webhooks
+      // Merge: keep user overrides, but fill in default URLs if stored one is empty
       return defaultWebhooks.map(def => {
         const existing = parsed.find(w => w.id === def.id);
-        return existing ? { ...def, ...existing } : def;
+        if (!existing) return def;
+        // If stored has no URL but default does, use the default
+        const url = existing.url || def.url;
+        const enabled = existing.url ? existing.enabled : def.enabled;
+        return { ...def, ...existing, url, enabled };
       });
     }
   } catch { /* ignore */ }
